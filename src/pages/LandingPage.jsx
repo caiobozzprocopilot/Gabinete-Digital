@@ -1,118 +1,162 @@
-import { Link } from 'react-router-dom'
-import { ArrowRight, MapPin, MessagesSquare, CheckCircle2, ChevronDown } from 'lucide-react'
+﻿import { Link } from 'react-router-dom'
+import { Building2, CheckCircle2, MapPin, MessagesSquare } from 'lucide-react'
+
+const FEATURES = [
+  {
+    icon: MessagesSquare,
+    title: 'Canal direto com o gabinete',
+    desc: 'Envie sua demanda pelo celular ou computador, com foto da ocorrencia, sem burocracia.',
+  },
+  {
+    icon: CheckCircle2,
+    title: 'Acompanhamento transparente',
+    desc: 'Cada solicitacao recebe um protocolo e fluxo de status: Nova, Em analise, Encaminhada, Resolvida.',
+  },
+  {
+    icon: MapPin,
+    title: 'Foco no municipio',
+    desc: 'Sistema desenvolvido para a realidade de Ortigueira — zona rural, estradas, iluminacao e muito mais.',
+  },
+]
+
+const STATS = [
+  { value: '247+', label: 'Demandas atendidas' },
+  { value: '89%', label: 'Taxa de resolucao' },
+  { value: '3 dias', label: 'Tempo medio de resposta' },
+  { value: '5 anos', label: 'Experiencia no mandato' },
+]
 
 export default function LandingPage() {
   return (
-    <div className="landing-root">
-      {/* ── Navbar ── */}
-      <nav className="landing-nav">
-        <div className="landing-nav-brand">
-          <div className="landing-nav-dot" />
-          <span className="landing-nav-name">Gabinete Digital</span>
-          <span className="landing-nav-city">Ortigueira</span>
+    <div className="min-h-screen bg-[#0b1a12] text-white">
+
+      {/* Nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 lg:px-10 h-16 bg-brand-950/95 backdrop-blur border-b border-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-600">
+            <Building2 className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-heading font-bold text-sm tracking-wide">Gabinete Digital</span>
         </div>
-        <ul className="landing-nav-links">
-          <li><a href="#sobre">Sobre</a></li>
-          <li><a href="#servicos">Serviços</a></li>
-          <li><Link to="/formulario">Enviar demanda</Link></li>
-        </ul>
-        <Link className="landing-nav-cta" to="/painel/login">
-          Acesso restrito
+        <div className="hidden md:flex items-center gap-7 text-sm text-white/60">
+          <a href="#sobre" className="hover:text-white transition-colors">Sobre</a>
+          <a href="#funcionalidades" className="hover:text-white transition-colors">Funcionalidades</a>
+        </div>
+        <Link
+          to="/atendimento/ortigueira"
+          className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors"
+        >
+          Enviar demanda
         </Link>
       </nav>
 
-      {/* ── Hero ── */}
-      <section className="landing-hero">
-        <div className="landing-hero-overlay" />
-        <div className="landing-hero-content">
-          <p className="landing-eyebrow">
-            <MapPin size={13} />
-            Vereador · Ortigueira, PR
-          </p>
-          <h1 className="landing-headline">
-            Sua voz,<br />
-            sua cidade,<br />
-            <em>seu vereador.</em>
+      {/* Hero */}
+      <section
+        className="relative flex items-center min-h-screen pt-16"
+        style={{ backgroundImage: "url('/cidade.jpeg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-950/95 via-brand-950/80 to-brand-950/40" />
+        <div className="relative z-10 max-w-5xl mx-auto px-6 lg:px-10 py-24">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-600/20 border border-brand-600/30 text-brand-400 text-xs font-semibold uppercase tracking-widest mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            Ortigueira, PR &bull; Mandato 2021&ndash;2024
+          </div>
+          <h1 className="text-4xl lg:text-6xl font-heading font-bold leading-tight mb-6 max-w-2xl">
+            Sua voz chega direto ao gabinete
           </h1>
-          <p className="landing-sub">
-            Registre suas demandas e acompanhe o andamento. Transparência e
-            agilidade no atendimento ao cidadão de Ortigueira.
+          <p className="text-white/70 text-lg leading-relaxed max-w-lg mb-10">
+            Registre solicitacoes, anexe fotos e acompanhe o andamento das suas demandas. Simples, rapido e transparente.
           </p>
-          <div className="landing-ctas">
-            <Link className="landing-cta-primary" to="/formulario">
-              Enviar demanda <ArrowRight size={16} />
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/atendimento/ortigueira"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-semibold transition-all shadow-lg shadow-brand-900/40"
+            >
+              Registrar uma demanda
             </Link>
-            <a className="landing-cta-ghost" href="#sobre">
+            <a
+              href="#sobre"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl border border-white/20 hover:border-white/40 hover:bg-white/5 text-white font-semibold transition-all"
+            >
               Saiba mais
             </a>
           </div>
         </div>
-
-        <a className="landing-scroll-hint" href="#stats">
-          <ChevronDown size={20} />
-        </a>
       </section>
 
-      {/* ── Stats strip ── */}
-      <section className="landing-stats" id="stats">
-        <div className="landing-stat">
-          <strong>247+</strong>
-          <span>Demandas registradas</span>
-        </div>
-        <div className="landing-stat-divider" />
-        <div className="landing-stat">
-          <strong>89%</strong>
-          <span>Taxa de resolução</span>
-        </div>
-        <div className="landing-stat-divider" />
-        <div className="landing-stat">
-          <strong>3 dias</strong>
-          <span>Tempo médio de resposta</span>
-        </div>
-        <div className="landing-stat-divider" />
-        <div className="landing-stat">
-          <strong>5 anos</strong>
-          <span>Servindo Ortigueira</span>
+      {/* Stats strip */}
+      <section className="bg-brand-900 py-14">
+        <div className="max-w-5xl mx-auto px-6 lg:px-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/5 rounded-2xl overflow-hidden">
+            {STATS.map(({ value, label }) => (
+              <div key={label} className="bg-brand-900 px-6 py-8 text-center">
+                <div className="text-3xl font-heading font-bold text-white mb-1">{value}</div>
+                <div className="text-sm text-white/50">{label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── About section ── */}
-      <section className="landing-about" id="sobre">
-        <div className="landing-about-text">
-          <p className="landing-section-eyebrow">Sobre o gabinete</p>
-          <h2>Compromisso com o cidadão de Ortigueira</h2>
-          <p>
-            O Gabinete Digital é uma iniciativa para aproximar o vereador dos
-            cidadãos, permitindo o registro de demandas, acompanhamento em tempo
-            real e maior transparência no trabalho legislativo.
-          </p>
-          <Link className="landing-cta-primary" to="/formulario">
-            Registrar minha demanda <ArrowRight size={16} />
+      {/* About */}
+      <section id="sobre" className="bg-[#0f2417] py-24">
+        <div className="max-w-5xl mx-auto px-6 lg:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <p className="text-brand-400 text-xs font-semibold uppercase tracking-widest mb-3">Sobre o sistema</p>
+              <h2 className="text-3xl font-heading font-bold leading-tight mb-5">
+                Tecnologia a servico da comunidade
+              </h2>
+              <p className="text-white/60 leading-relaxed mb-5">
+                O Gabinete Digital foi criado para aproximar o vereador dos moradores de Ortigueira. Cada demanda e registrada, triada e encaminhada com agilidade — garantindo transparencia e rastreabilidade.
+              </p>
+              <p className="text-white/60 leading-relaxed">
+                Seja uma solicitacao de manutenção de estrada rural, iluminacao publica ou atendimento social, o sistema garante que sua voz seja ouvida.
+              </p>
+            </div>
+
+            {/* Feature cards */}
+            <div id="funcionalidades" className="space-y-3">
+              {FEATURES.map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/8 hover:bg-white/8 transition-colors">
+                  <div className="flex-none flex items-center justify-center w-10 h-10 rounded-xl bg-brand-600/20 border border-brand-600/20 text-brand-400">
+                    <Icon size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-heading font-semibold text-white mb-1">{title}</h3>
+                    <p className="text-xs text-white/50 leading-relaxed">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-24 bg-brand-900">
+        <div className="max-w-2xl mx-auto px-6 text-center">
+          <h2 className="text-3xl font-heading font-bold mb-4">Pronto para registrar sua demanda?</h2>
+          <p className="text-white/60 mb-8">Leva menos de 2 minutos. Sem cadastro, sem burocracia.</p>
+          <Link
+            to="/atendimento/ortigueira"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-semibold transition-all shadow-lg shadow-brand-950/40 text-lg"
+          >
+            Enviar minha demanda
           </Link>
         </div>
-        <div className="landing-about-cards">
-          <div className="landing-feature-card">
-            <div className="landing-feature-icon"><MessagesSquare size={22} /></div>
-            <h3>Atendimento direto</h3>
-            <p>Envie sua demanda e receba resposta diretamente do gabinete.</p>
-          </div>
-          <div className="landing-feature-card">
-            <div className="landing-feature-icon"><CheckCircle2 size={22} /></div>
-            <h3>Acompanhamento</h3>
-            <p>Acompanhe o status de cada demanda em tempo real com protocolo único.</p>
-          </div>
-          <div className="landing-feature-card">
-            <div className="landing-feature-icon"><MapPin size={22} /></div>
-            <h3>Presença local</h3>
-            <p>Atuação em todos os bairros e distritos do município de Ortigueira.</p>
-          </div>
-        </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="landing-footer">
-        <span>© 2026 Gabinete Digital · Ortigueira, PR</span>
-        <Link to="/painel/login">Acesso do vereador</Link>
+      {/* Footer */}
+      <footer className="bg-brand-950 py-8 border-t border-white/5">
+        <div className="max-w-5xl mx-auto px-6 lg:px-10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/30">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-brand-600" />
+            <span>Gabinete Digital</span>
+          </div>
+          <span>&copy; 2026 Gabinete Digital &middot; Ortigueira, PR</span>
+          <Link to="/painel/login" className="hover:text-white/60 transition-colors">Acesso administrativo</Link>
+        </div>
       </footer>
     </div>
   )

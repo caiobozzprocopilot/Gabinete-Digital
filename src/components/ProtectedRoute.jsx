@@ -12,8 +12,8 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
 
   if (loading) {
     return (
-      <div className="screen-center">
-        <p>Validando acesso...</p>
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <p className="text-slate-400 text-sm">Validando acesso...</p>
       </div>
     )
   }
@@ -24,10 +24,10 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
 
   if (allowedRoles.length && !allowedRoles.includes(userProfile?.role)) {
     return (
-      <div className="screen-center">
-        <div className="card narrow">
-          <h2>Acesso restrito</h2>
-          <p>Seu usuário não possui permissão para acessar esta área.</p>
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-sm w-full text-center">
+          <h2 className="font-heading text-lg font-bold text-slate-900 mb-2">Acesso restrito</h2>
+          <p className="text-sm text-slate-500">Seu usuario nao possui permissao para acessar esta area.</p>
         </div>
       </div>
     )

@@ -1,139 +1,132 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Building2 } from 'lucide-react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/useAuth'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../firebase/config'
 import { isTestMode } from '../utils/testMode'
 
 export default function AdminLoginPage() {
-  const { user, login, loading, firebaseReady } = useAuth()
-  const location = useLocation()
-  const navigate = useNavigate()
-
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail]         = useState('')
+  const [password, setPassword]   = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]         = useState(null)
+  const navigate                  = useNavigate()
 
-  const redirectTo = location.state?.from || '/painel'
-
-  if (loading) {
-    return (
-      <div className="screen-center">
-        <p>Carregando sessão...</p>
-      </div>
-    )
-  }
-
-  if (user) {
-    return <Navigate to={redirectTo} replace />
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault()
-
-    if (submitting) {
-      return
-    }
-
-    if (isTestMode) {
-      navigate('/painel', { replace: true })
-      return
-    }
-
+  async function handleLogin(e) {
+    e.preventDefault()
+    setError(null)
     setSubmitting(true)
-    setError('')
-
     try {
-      await login({ email, password })
-      navigate(redirectTo, { replace: true })
-    } catch (nextError) {
-      setError(nextError.message)
+      if (isTestMode) {
+        navigate('/painel')
+        return
+      }
+      await signInWithEmailAndPassword(auth, email, password)
+      navigate('/painel')
+    } catch (err) {
+      setError('E-mail ou senha incorretos. Tente novamente.')
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="login-shell">
-      {/* Left photo panel */}
-      <div className="login-left">
-        <div className="login-brand">
-          <div className="login-brand-icon"><Building2 size={28} /></div>
-          <div className="login-brand-name">
-            Gabinete Digital<br />Ortigueira
+    <div className="flex h-screen overflow-hidden">
+
+      {/* ── Left panel: city photo ── */}
+      <div
+        className="hidden lg:flex w-1/2 relative flex-col justify-between p-10"
+        style={{ backgroundImage: "url('/cidade login.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+      >
+        {/* dark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-950/80 via-brand-900/60 to-brand-800/70" />
+
+        {/* brand badge */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-600">
+            <Building2 className="w-5 h-5 text-white" />
           </div>
+          <span className="text-white font-heading text-lg font-bold tracking-wide">Gabinete Digital</span>
         </div>
 
-        <div className="login-photo-caption">
-          <h2>Câmara Municipal<br />de Ortigueira</h2>
-          <p>Casa do Povo — gestão de demandas com transparência e agilidade.</p>
+        {/* caption */}
+        <div className="relative z-10">
+          <p className="text-brand-100 text-sm font-medium mb-1">Municipio de Ortigueira, PR</p>
+          <h2 className="text-white font-heading text-3xl font-bold leading-tight mb-3">
+            Gestao inteligente<br />do mandato
+          </h2>
+          <p className="text-white/70 text-sm leading-relaxed max-w-xs">
+            Acompanhe demandas, gerencie atendimentos e impacte positivamente a sua comunidade.
+          </p>
         </div>
       </div>
 
-      {/* Right form panel */}
-      <div className="login-right">
-        <div className="login-form-container">
-          <h1>Login</h1>
-          <p className="login-subtitle">
-            Acesso exclusivo para o vereador e sua assessoria.
-          </p>
+      {/* ── Right panel: login form ── */}
+      <div className="flex-1 flex items-center justify-center bg-white px-8 py-12">
+        <div className="w-full max-w-sm">
 
-          {!firebaseReady && !isTestMode ? (
-            <p className="feedback error">
-              Firebase não configurado. Ajuste o arquivo .env.local antes de usar o
-              login.
-            </p>
-          ) : null}
+          {/* mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-700">
+              <Building2 className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-heading text-base font-bold text-brand-900">Gabinete Digital</span>
+          </div>
 
-          {isTestMode ? (
-            <p className="feedback info">
-              Modo teste ativo: você pode entrar sem autenticação real.
-            </p>
-          ) : null}
+          <h1 className="text-2xl font-heading font-bold text-slate-900 mb-1">Bem-vindo de volta</h1>
+          <p className="text-sm text-slate-500 mb-8">Acesse o painel administrativo</p>
 
-          <form className="login-form" onSubmit={handleSubmit}>
-            <div className="input-group">
-              <label htmlFor="email">Email</label>
+          {error && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                E-mail
+              </label>
               <input
-                id="email"
                 type="email"
-                placeholder="seu@email.com"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required={!isTestMode}
+                onChange={e => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                placeholder="seu@email.com"
+                className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-brand-700 focus:outline-none pb-2 text-slate-900 text-sm placeholder:text-slate-400 transition-colors"
               />
             </div>
 
-            <div className="input-group">
-              <div className="login-password-row">
-                <label htmlFor="password">Senha</label>
-                <a className="login-forgot" href="#">Esqueceu a senha?</a>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Senha
+              </label>
               <input
-                id="password"
                 type="password"
-                placeholder="••••••••"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required={!isTestMode}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-brand-700 focus:outline-none pb-2 text-slate-900 text-sm placeholder:text-slate-400 transition-colors"
               />
             </div>
 
-            {error ? <p className="feedback error">{error}</p> : null}
+            <div className="flex justify-end">
+              <button type="button" className="text-xs text-slate-400 hover:text-brand-700 transition-colors">
+                Esqueceu a senha?
+              </button>
+            </div>
 
             <button
-              className="primary-button full"
-              disabled={submitting || (!firebaseReady && !isTestMode)}
+              type="submit"
+              disabled={submitting}
+              className="w-full py-3.5 rounded-[14px] bg-[#1b2d5b] hover:bg-[#243974] active:scale-[0.98] text-white text-sm font-semibold tracking-wide transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {submitting ? 'Entrando...' : 'Entrar no painel'}
+              {submitting ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
-
-          <p className="login-back-link">
-            <Link className="ghost-link" to="/">
-              ← Voltar para o formulário público
-            </Link>
-          </p>
         </div>
       </div>
     </div>
