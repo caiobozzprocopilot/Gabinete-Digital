@@ -6,6 +6,7 @@ import AdminLoginPage from './pages/AdminLoginPage'
 import DashboardPage from './pages/DashboardPage'
 import LandingPage from './pages/LandingPage'
 import PublicFormPage from './pages/PublicFormPage'
+import SignupPage from './pages/SignupPage'
 import './App.css'
 
 function App() {
@@ -14,6 +15,8 @@ function App() {
       <TestModeNav />
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/vereador/:slug" element={<LandingPage />} />
+        <Route path="/cadastro" element={<SignupPage />} />
         <Route path="/formulario" element={<PublicFormPage />} />
         <Route path="/atendimento/:slug" element={<PublicFormPage />} />
         <Route path="/painel/login" element={<AdminLoginPage />} />

@@ -1,8 +1,9 @@
-﻿import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+﻿import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Building2 } from 'lucide-react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase/config'
+import { getTenant } from '../services/tenantsService'
 import { isTestMode } from '../utils/testMode'
 
 export default function AdminLoginPage() {
@@ -10,7 +11,16 @@ export default function AdminLoginPage() {
   const [password, setPassword]   = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]         = useState(null)
+  const [tenantData, setTenantData] = useState(null)
   const navigate                  = useNavigate()
+  const [searchParams]            = useSearchParams()
+
+  useEffect(() => {
+    const gabinete = searchParams.get('gabinete')
+    if (gabinete) {
+      getTenant(gabinete).then(setTenantData).catch(() => {})
+    }
+  }, [searchParams])
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -36,7 +46,7 @@ export default function AdminLoginPage() {
       {/* ── Left panel: city photo ── */}
       <div
         className="hidden lg:flex w-1/2 relative flex-col justify-between p-10"
-        style={{ backgroundImage: "url('/cidade login.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ backgroundImage: `url(${tenantData?.loginPhotoUrl || '/cidade login.jpg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
         {/* dark overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-brand-950/80 via-brand-900/60 to-brand-800/70" />
@@ -51,7 +61,9 @@ export default function AdminLoginPage() {
 
         {/* caption */}
         <div className="relative z-10">
-          <p className="text-brand-100 text-sm font-medium mb-1">Municipio de Ortigueira, PR</p>
+          <p className="text-brand-100 text-sm font-medium mb-1">
+            {tenantData ? `Município de ${tenantData.cityName}${tenantData.state ? `, ${tenantData.state}` : ''}` : 'Painel administrativo'}
+          </p>
           <h2 className="text-white font-heading text-3xl font-bold leading-tight mb-3">
             Gestao inteligente<br />do mandato
           </h2>

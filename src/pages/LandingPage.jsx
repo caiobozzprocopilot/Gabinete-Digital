@@ -1,32 +1,46 @@
-﻿import { Link } from 'react-router-dom'
+﻿import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { Building2, CheckCircle2, MapPin, MessagesSquare } from 'lucide-react'
-
-const FEATURES = [
-  {
-    icon: MessagesSquare,
-    title: 'Canal direto com o gabinete',
-    desc: 'Envie sua demanda pelo celular ou computador, com foto da ocorrencia, sem burocracia.',
-  },
-  {
-    icon: CheckCircle2,
-    title: 'Acompanhamento transparente',
-    desc: 'Cada solicitacao recebe um protocolo e fluxo de status: Nova, Em analise, Encaminhada, Resolvida.',
-  },
-  {
-    icon: MapPin,
-    title: 'Foco no municipio',
-    desc: 'Sistema desenvolvido para a realidade de Ortigueira — zona rural, estradas, iluminacao e muito mais.',
-  },
-]
-
-const STATS = [
-  { value: '247+', label: 'Demandas atendidas' },
-  { value: '89%', label: 'Taxa de resolucao' },
-  { value: '3 dias', label: 'Tempo medio de resposta' },
-  { value: '5 anos', label: 'Experiencia no mandato' },
-]
+import { getTenant } from '../services/tenantsService'
 
 export default function LandingPage() {
+  const { slug } = useParams()
+  const [tenantData, setTenantData] = useState(null)
+
+  useEffect(() => {
+    if (slug) getTenant(slug).then(setTenantData).catch(() => {})
+  }, [slug])
+
+  const formSlug = slug || 'ortigueira'
+  const cityLabel = tenantData ? `${tenantData.cityName}${tenantData.state ? `, ${tenantData.state}` : ''}` : 'Ortigueira, PR'
+  const vereadorName = tenantData?.vereadorName || 'Vereador'
+  const heroPhoto = tenantData?.heroPhotoUrl || '/cidade.jpeg'
+
+  const FEATURES = [
+    {
+      icon: MessagesSquare,
+      title: 'Canal direto com o gabinete',
+      desc: 'Envie sua demanda pelo celular ou computador, com foto da ocorrencia, sem burocracia.',
+    },
+    {
+      icon: CheckCircle2,
+      title: 'Acompanhamento transparente',
+      desc: 'Cada solicitacao recebe um protocolo e fluxo de status: Nova, Em analise, Encaminhada, Resolvida.',
+    },
+    {
+      icon: MapPin,
+      title: `Foco em ${tenantData?.cityName || 'seu município'}`,
+      desc: 'Sistema desenvolvido para a realidade local — zona rural, estradas, iluminacao e muito mais.',
+    },
+  ]
+
+  const STATS = [
+    { value: '247+', label: 'Demandas atendidas' },
+    { value: '89%', label: 'Taxa de resolucao' },
+    { value: '3 dias', label: 'Tempo medio de resposta' },
+    { value: '5 anos', label: 'Experiencia no mandato' },
+  ]
+
   return (
     <div className="min-h-screen bg-[#0b1a12] text-white">
 
@@ -43,7 +57,7 @@ export default function LandingPage() {
           <a href="#funcionalidades" className="hover:text-white transition-colors">Funcionalidades</a>
         </div>
         <Link
-          to="/atendimento/ortigueira"
+          to={`/atendimento/${formSlug}`}
           className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors"
         >
           Enviar demanda
@@ -53,13 +67,13 @@ export default function LandingPage() {
       {/* Hero */}
       <section
         className="relative flex items-center min-h-screen pt-16"
-        style={{ backgroundImage: "url('/cidade.jpeg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ backgroundImage: `url(${heroPhoto})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-brand-950/95 via-brand-950/80 to-brand-950/40" />
         <div className="relative z-10 max-w-5xl mx-auto px-6 lg:px-10 py-24">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-600/20 border border-brand-600/30 text-brand-400 text-xs font-semibold uppercase tracking-widest mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
-            Ortigueira, PR &bull; Mandato 2021&ndash;2024
+            {cityLabel}
           </div>
           <h1 className="text-4xl lg:text-6xl font-heading font-bold leading-tight mb-6 max-w-2xl">
             Sua voz chega direto ao gabinete
@@ -69,7 +83,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/atendimento/ortigueira"
+              to={`/atendimento/${formSlug}`}
               className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-semibold transition-all shadow-lg shadow-brand-900/40"
             >
               Registrar uma demanda
@@ -108,7 +122,7 @@ export default function LandingPage() {
                 Tecnologia a servico da comunidade
               </h2>
               <p className="text-white/60 leading-relaxed mb-5">
-                O Gabinete Digital foi criado para aproximar o vereador dos moradores de Ortigueira. Cada demanda e registrada, triada e encaminhada com agilidade — garantindo transparencia e rastreabilidade.
+                O Gabinete Digital foi criado para aproximar o vereador dos moradores de {tenantData?.cityName || 'Ortigueira'}. Cada demanda e registrada, triada e encaminhada com agilidade — garantindo transparencia e rastreabilidade.
               </p>
               <p className="text-white/60 leading-relaxed">
                 Seja uma solicitacao de manutenção de estrada rural, iluminacao publica ou atendimento social, o sistema garante que sua voz seja ouvida.
@@ -139,7 +153,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-heading font-bold mb-4">Pronto para registrar sua demanda?</h2>
           <p className="text-white/60 mb-8">Leva menos de 2 minutos. Sem cadastro, sem burocracia.</p>
           <Link
-            to="/atendimento/ortigueira"
+            to={`/atendimento/${formSlug}`}
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-semibold transition-all shadow-lg shadow-brand-950/40 text-lg"
           >
             Enviar minha demanda
@@ -154,7 +168,7 @@ export default function LandingPage() {
             <Building2 className="w-4 h-4 text-brand-600" />
             <span>Gabinete Digital</span>
           </div>
-          <span>&copy; 2026 Gabinete Digital &middot; Ortigueira, PR</span>
+          <span>&copy; 2026 Gabinete Digital &middot; {cityLabel}</span>
           <Link to="/painel/login" className="hover:text-white/60 transition-colors">Acesso administrativo</Link>
         </div>
       </footer>

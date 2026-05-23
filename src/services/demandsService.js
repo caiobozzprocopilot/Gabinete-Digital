@@ -8,6 +8,7 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  where,
 } from 'firebase/firestore'
 import { db, firebaseReady } from '../firebase/config'
 
@@ -40,10 +41,14 @@ export async function submitDemand(demandData) {
   return docRef.id
 }
 
-export function subscribeDemands(onData, onError) {
+export function subscribeDemands(tenantSlug, onData, onError) {
   ensureFirebase()
 
-  const q = query(collection(db, DEMANDS_COLLECTION), orderBy('createdAt', 'desc'))
+  const constraints = tenantSlug
+    ? [where('tenantSlug', '==', tenantSlug), orderBy('createdAt', 'desc')]
+    : [orderBy('createdAt', 'desc')]
+
+  const q = query(collection(db, DEMANDS_COLLECTION), ...constraints)
 
   return onSnapshot(
     q,

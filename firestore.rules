@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Dados públicos dos gabinetes — qualquer um pode ler
+    match /tenants/{slug} {
+      allow read: if true;
+      allow write: if false; // só via SDK admin (seed-tenant.js)
+    }
+
+    // Demandas — qualquer um pode criar, só autenticados podem ler/atualizar
+    match /demands/{demandId} {
+      allow create: if true;
+      allow read, update: if request.auth != null;
+    }
+
+    // Perfis de admin — só o próprio usuário autenticado
+    match /adminUsers/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

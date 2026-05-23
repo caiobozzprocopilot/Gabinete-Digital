@@ -1,9 +1,10 @@
 ﻿import { useEffect, useRef, useState } from 'react'
-import { Building2, Camera } from 'lucide-react'
+import { Building2, Camera, User, Phone, MapPin, FileText } from 'lucide-react'
 import ReCAPTCHA from 'react-google-recaptcha'
 import { Link, useParams } from 'react-router-dom'
 import { firebaseReady } from '../firebase/config'
 import { submitDemand } from '../services/demandsService'
+import { getTenant } from '../services/tenantsService'
 import { serializeImages } from '../utils/imageUtils'
 import { isTestMode } from '../utils/testMode'
 
@@ -33,6 +34,11 @@ export default function PublicFormPage() {
   const [recaptchaToken, setRecaptchaToken] = useState('')
   const [sending, setSending] = useState(false)
   const [feedback, setFeedback] = useState({ type: '', message: '' })
+  const [tenantData, setTenantData] = useState(null)
+
+  useEffect(() => {
+    getTenant(slugValue).then(setTenantData).catch(() => {})
+  }, [slugValue])
 
   useEffect(() => {
     return () => {
@@ -51,7 +57,7 @@ export default function PublicFormPage() {
   function handleFilesChange(event) {
     const selectedFiles = Array.from(event.target.files || [])
     if (selectedFiles.length > MAX_FILES) {
-      setFeedback({ type: 'error', message: `Voce pode enviar ate ${MAX_FILES} fotos por demanda.` })
+      setFeedback({ type: 'error', message: `Você pode enviar até ${MAX_FILES} fotos por demanda.` })
       return
     }
     setFiles(selectedFiles)
@@ -68,9 +74,9 @@ export default function PublicFormPage() {
     }
     if (!formData.voterName.trim()) return 'Informe o nome completo.'
     if (!formData.voterPhone.trim()) return 'Informe um telefone para retorno.'
-    if (!formData.voterAddress.trim()) return 'Informe o endereco completo da ocorrencia.'
+    if (!formData.voterAddress.trim()) return 'Informe o endereço completo da ocorrência.'
     if (!formData.description.trim()) return 'Descreva a demanda.'
-    if (!formData.consent) return 'Voce precisa aceitar o tratamento dos dados para enviar a demanda.'
+    if (!formData.consent) return 'Você precisa aceitar o tratamento dos dados para enviar a demanda.'
     if (!isTestMode && recaptchaSiteKey && !recaptchaToken) return 'Confirme o reCAPTCHA para continuar.'
     return ''
   }
@@ -79,7 +85,7 @@ export default function PublicFormPage() {
     event.preventDefault()
     if (sending) return
     if (honeypot) {
-      setFeedback({ type: 'success', message: 'Recebemos sua solicitacao. Obrigado pelo contato.' })
+      setFeedback({ type: 'success', message: 'Recebemos sua solicitação. Obrigado pelo contato.' })
       return
     }
     const validationMessage = validateForm()
@@ -107,7 +113,7 @@ export default function PublicFormPage() {
           voterAddress: formData.voterAddress.trim(),
           description: formData.description.trim(),
           attachments,
-          sourceSlug: slugValue,
+          tenantSlug: slugValue,
           consentGivenAt: new Date().toISOString(),
           recaptchaValidated: Boolean(recaptchaToken),
         })
@@ -125,7 +131,7 @@ export default function PublicFormPage() {
           : 'Demanda enviada com sucesso. A equipe do vereador vai analisar seu pedido.',
       })
     } catch (error) {
-      setFeedback({ type: 'error', message: error?.message || 'Nao foi possivel enviar a demanda. Tente novamente.' })
+      setFeedback({ type: 'error', message: error?.message || 'Não foi possível enviar a demanda. Tente novamente.' })
     } finally {
       setSending(false)
     }
@@ -139,11 +145,15 @@ export default function PublicFormPage() {
         <div className="flex items-center gap-2.5">
           <span className="w-2 h-2 rounded-full bg-brand-600 shadow-[0_0_0_4px_rgba(34,160,112,0.2)]" aria-hidden="true" />
           <div className="leading-tight">
-            <strong className="text-sm font-semibold text-slate-900">Gabinete Digital Ortigueira</strong>
-            <span className="block text-xs text-slate-400">Canal oficial para demandas dos eleitores</span>
+            <strong className="text-sm font-semibold text-slate-900">
+              Gabinete Digital {tenantData?.cityName || slugValue}
+            </strong>
+            <span className="block text-xs text-slate-400">
+              {tenantData?.vereadorName ? `Vereador(a) ${tenantData.vereadorName}` : 'Canal oficial para demandas dos eleitores'}
+            </span>
           </div>
         </div>
-        <Link className="text-xs text-slate-500 hover:text-brand-700 font-medium transition-colors" to="/painel/login">
+        <Link className="text-xs text-slate-500 hover:text-brand-700 font-medium transition-colors" to={`/painel/login?gabinete=${slugValue}`}>
           Acesso administrativo
         </Link>
       </header>
@@ -153,10 +163,10 @@ export default function PublicFormPage() {
 
         {/* Left panel */}
         <aside
-          className="hidden lg:flex flex-col w-[420px] xl:w-[480px] flex-none relative overflow-hidden"
-          style={{ backgroundImage: "url('/CIDADE pagina form.jpeg')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+          className="hidden lg:flex flex-col w-[45%] flex-none relative overflow-hidden"
+          style={{ backgroundImage: `url(${tenantData?.formPhotoUrl || '/CIDADE pagina form.jpeg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-950/90 via-brand-950/40 to-brand-950/90" />
+          <div className="absolute inset-0 bg-gradient-to-b from-brand-950/95 via-brand-950/80 to-brand-950/95" />
 
           {/* brand badge */}
           <div className="relative z-10 flex items-center gap-2.5 p-8">
@@ -173,14 +183,14 @@ export default function PublicFormPage() {
               Registre sua<br />demanda em<br />poucos minutos
             </h1>
             <p className="text-white/70 text-sm leading-relaxed mb-6">
-              Este canal permite enviar solicitacoes, anexar fotos e acompanhar o encaminhamento junto ao gabinete.
+              Este canal permite enviar solicitações, anexar fotos e acompanhar o encaminhamento junto ao gabinete.
             </p>
 
             <ul className="space-y-2 mb-6">
               {[
-                'Envio simples pelo celular com fotos da ocorrencia',
+                'Envio simples pelo celular com fotos da ocorrência',
                 'Triagem e encaminhamento com status atualizado',
-                'Registro historico para transparencia do atendimento',
+                'Registro histórico para transparência do atendimento',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2 text-xs text-white/80">
                   <span className="mt-1.5 w-1 h-1 rounded-full bg-brand-400 flex-none" />
@@ -190,7 +200,7 @@ export default function PublicFormPage() {
             </ul>
 
             <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3 mb-5">
-              <p className="text-white/50 text-xs font-medium mb-0.5">Link publico ativo</p>
+              <p className="text-white/50 text-xs font-medium mb-0.5">Link público ativo</p>
               <p className="text-white text-sm font-mono">/atendimento/{slugValue}</p>
             </div>
 
@@ -209,7 +219,7 @@ export default function PublicFormPage() {
 
             {isTestMode && (
               <p className="mt-4 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2">
-                Modo teste ativo: envio simulado para facilitar a revisao.
+                Modo teste ativo: envio simulado para facilitar a revisão.
               </p>
             )}
             {!firebaseReady && !isTestMode && (
@@ -228,7 +238,7 @@ export default function PublicFormPage() {
         {/* Right form panel */}
         <section className="flex-1 overflow-y-auto bg-white border-l border-slate-100">
           <div className="max-w-lg mx-auto px-6 py-10">
-            <h2 className="font-heading text-2xl font-bold text-slate-900 mb-1">Abrir solicitacao</h2>
+            <h2 className="font-heading text-2xl font-bold text-slate-900 mb-1">Abrir solicitação</h2>
             <p className="text-sm text-slate-500 mb-8">Preencha os campos abaixo para registrar sua demanda.</p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -243,27 +253,39 @@ export default function PublicFormPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5" htmlFor="voterName">Nome completo</label>
-                <input id="voterName" name="voterName" type="text" value={formData.voterName} onChange={handleFieldChange} required maxLength={120}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-600 focus:bg-white transition-colors" />
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5" htmlFor="voterName">Nome completo</label>
+                <div className="relative">
+                  <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input id="voterName" name="voterName" type="text" value={formData.voterName} onChange={handleFieldChange} required maxLength={120} placeholder="Como prefere ser chamado"
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-brand-600 transition-colors" />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5" htmlFor="voterPhone">Telefone para contato</label>
-                <input id="voterPhone" name="voterPhone" type="tel" value={formData.voterPhone} onChange={handleFieldChange} required maxLength={30}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-600 focus:bg-white transition-colors" />
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5" htmlFor="voterPhone">Telefone para contato</label>
+                <div className="relative">
+                  <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input id="voterPhone" name="voterPhone" type="tel" value={formData.voterPhone} onChange={handleFieldChange} required maxLength={30} placeholder="(00) 00000-0000"
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-brand-600 transition-colors" />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5" htmlFor="voterAddress">Endereco completo</label>
-                <input id="voterAddress" name="voterAddress" type="text" value={formData.voterAddress} onChange={handleFieldChange} required maxLength={180}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-600 focus:bg-white transition-colors" />
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5" htmlFor="voterAddress">Endereço completo</label>
+                <div className="relative">
+                  <MapPin size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input id="voterAddress" name="voterAddress" type="text" value={formData.voterAddress} onChange={handleFieldChange} required maxLength={180} placeholder="Rua, número, bairro"
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-brand-600 transition-colors" />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5" htmlFor="description">Descricao da demanda</label>
-                <textarea id="description" name="description" rows={5} value={formData.description} onChange={handleFieldChange} required maxLength={1800}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-600 focus:bg-white transition-colors resize-none" />
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5" htmlFor="description">Descrição da demanda</label>
+                <div className="relative">
+                  <FileText size={15} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+                  <textarea id="description" name="description" rows={5} value={formData.description} onChange={handleFieldChange} required maxLength={1800} placeholder="Descreva o problema ou solicitação com o máximo de detalhes possível"
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 pt-3 pb-3 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-brand-600 transition-colors resize-none" />
+                </div>
               </div>
 
               <div>
@@ -281,7 +303,7 @@ export default function PublicFormPage() {
                       <Camera size={38} strokeWidth={1.3} className="text-slate-400" />
                       <span className="text-sm font-medium text-slate-600">Adicionar fotos</span>
                       <span className="text-xs text-slate-400">
-                        Clique para selecionar &middot; ate {MAX_FILES} fotos &middot; {MAX_FILE_SIZE_MB}&nbsp;MB cada
+                        Clique para selecionar &middot; até {MAX_FILES} fotos &middot; {MAX_FILE_SIZE_MB}&nbsp;MB cada
                       </span>
                     </>
                   ) : (
@@ -303,7 +325,7 @@ export default function PublicFormPage() {
                 <input id="consent" name="consent" type="checkbox" checked={formData.consent} onChange={handleFieldChange}
                   className="mt-0.5 w-4 h-4 rounded border-slate-300 accent-brand-700" />
                 <span className="text-xs text-slate-600 leading-relaxed">
-                  Autorizo o uso dos meus dados para atendimento da solicitacao, conforme aviso de privacidade do gabinete.
+                  Autorizo o uso dos meus dados para atendimento da solicitação, conforme aviso de privacidade do gabinete.
                 </span>
               </label>
 
