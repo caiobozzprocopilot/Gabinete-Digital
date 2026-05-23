@@ -328,9 +328,10 @@
 .page-shell {
   width: 100%;
   margin: 0;
-  display: grid;
-  gap: 0;
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
   background: #f8fafc;
 }
 
@@ -381,9 +382,10 @@
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(400px, 1.1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 0;
-  align-items: stretch;
+  flex: 1;
+  overflow: hidden;
 }
 
 /* shared card base used by dashboard */
@@ -402,10 +404,12 @@
   padding: 1.25rem;
 }
 
-/* ── LEFT PANEL — hero ──────────────────────────────── */
+/* ── LEFT PANEL — hero com imagem isométrica ──────────────────────── */
 .intro-card {
-  padding: 3rem 2.5rem;
-  background: linear-gradient(155deg, #092618 0%, #0f3d22 35%, #0a2e1a 70%, #061a0f 100%);
+  padding: 2.5rem 2.5rem;
+  background-image: url('/CIDADE pagina form.jpeg');
+  background-size: cover;
+  background-position: center 22%;
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -413,32 +417,64 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
 }
 
-/* decorative glow top-right */
+/* dark vignette: escurece topo e base, imagem aparece no centro */
 .intro-card::before {
   content: "";
   position: absolute;
-  top: -100px;
-  right: -80px;
-  width: 380px;
-  height: 380px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(74,222,128,.14) 0%, transparent 65%);
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(5,20,12,0.65) 0%,
+    rgba(5,20,12,0.08) 28%,
+    rgba(5,20,12,0.08) 50%,
+    rgba(5,20,12,0.72) 72%,
+    rgba(5,20,12,0.95) 100%
+  );
   pointer-events: none;
+  z-index: 0;
 }
 
-/* decorative glow bottom-left */
 .intro-card::after {
-  content: "";
-  position: absolute;
-  bottom: -80px;
-  left: -60px;
-  width: 300px;
-  height: 300px;
+  display: none;
+}
+
+/* brand badge no topo do painel esquerdo */
+.intro-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  position: relative;
+  z-index: 2;
+}
+
+.intro-brand-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(26,122,88,.22) 0%, transparent 65%);
-  pointer-events: none;
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74,222,128,0.28);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+.intro-brand > span:last-child {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.92);
+  letter-spacing: 0.02em;
+}
+
+/* wrapper do conteúdo inferior */
+.intro-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .eyebrow {
@@ -448,20 +484,27 @@
   color: #4ade80;
   font-weight: 700;
   margin-bottom: 0.6rem;
+  position: relative;
+  z-index: 1;
 }
 
 .intro-card h1 {
-  font-size: clamp(1.65rem, 2.8vw, 2.4rem);
+  font-size: clamp(1.55rem, 2.5vw, 2.2rem);
   margin-bottom: 0.8rem;
   line-height: 1.15;
   color: #ffffff;
+  position: relative;
+  z-index: 1;
 }
 
-.intro-card > p {
+.intro-card > p,
+.intro-content > p {
   line-height: 1.65;
   color: rgba(255,255,255,0.72);
-  font-size: 0.97rem;
+  font-size: 0.95rem;
   margin: 0;
+  position: relative;
+  z-index: 1;
 }
 
 h1 { font-size: clamp(1.5rem, 2.6vw, 2.2rem); margin-bottom: 0.5rem; line-height: 1.2; }
@@ -573,6 +616,9 @@ p  { line-height: 1.55; color: var(--muted); margin: 0; }
   border-left: 1px solid rgba(0,0,0,0.07);
   border-radius: 0;
   box-shadow: none;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .form-header {
@@ -1095,9 +1141,10 @@ p  { line-height: 1.55; color: var(--muted); margin: 0; }
 @media (max-width: 860px) {
   .login-shell { grid-template-columns: 1fr; }
   .login-left  { display: none; }
-  .content-grid { grid-template-columns: 1fr; }
-  .intro-card { padding: 2.5rem 1.5rem; min-height: auto; }
-  .form-card { padding: 2rem 1.5rem; border-left: none; border-top: 1px solid rgba(0,0,0,0.07); }
+  .page-shell { height: auto; overflow: visible; }
+  .content-grid { grid-template-columns: 1fr; overflow: visible; }
+  .intro-card { padding: 2.5rem 1.5rem; height: auto; min-height: 360px; justify-content: flex-end; }
+  .form-card { padding: 2rem 1.5rem; border-left: none; border-top: 1px solid rgba(0,0,0,0.07); height: auto; overflow-y: visible; }
   .top-bar { padding: 0.75rem 1.25rem; }
   .dashboard-main { margin-left: 0; }
   .sidebar { display: none; }

@@ -201,52 +201,61 @@ export default function PublicFormPage() {
 
       <main className="content-grid">
         <section className="intro-card card">
-          <p className="eyebrow">Atendimento do vereador</p>
-          <h1>Registre sua demanda em poucos minutos</h1>
-          <p>
-            Este canal permite enviar solicitações, anexar fotos e acompanhar o
-            encaminhamento junto ao gabinete.
-          </p>
-          <ul className="feature-list">
-            <li>Envio simples pelo celular com fotos da ocorrência</li>
-            <li>Triagem e encaminhamento com status atualizado</li>
-            <li>Registro histórico para transparência do atendimento</li>
-          </ul>
-          <div className="highlight-box">
-            <p className="highlight-title">Link público ativo</p>
-            <p>/atendimento/{slugValue}</p>
+          {/* brand badge — topo */}
+          <div className="intro-brand">
+            <span className="intro-brand-dot" aria-hidden="true" />
+            <span>Gabinete Digital Ortigueira</span>
           </div>
-          <div className="hero-metrics">
-            <div className="metric-card">
-              <span>Canal</span>
-              <strong>24h</strong>
+
+          {/* conteúdo — base */}
+          <div className="intro-content">
+            <p className="eyebrow">Atendimento do vereador</p>
+            <h1>Registre sua demanda em poucos minutos</h1>
+            <p>
+              Este canal permite enviar solicitações, anexar fotos e acompanhar o
+              encaminhamento junto ao gabinete.
+            </p>
+            <ul className="feature-list">
+              <li>Envio simples pelo celular com fotos da ocorrência</li>
+              <li>Triagem e encaminhamento com status atualizado</li>
+              <li>Registro histórico para transparência do atendimento</li>
+            </ul>
+            <div className="highlight-box">
+              <p className="highlight-title">Link público ativo</p>
+              <p>/atendimento/{slugValue}</p>
             </div>
-            <div className="metric-card">
-              <span>Anexos</span>
-              <strong>5 fotos</strong>
+            <div className="hero-metrics">
+              <div className="metric-card">
+                <span>Canal</span>
+                <strong>24h</strong>
+              </div>
+              <div className="metric-card">
+                <span>Anexos</span>
+                <strong>5 fotos</strong>
+              </div>
+              <div className="metric-card">
+                <span>Fluxo</span>
+                <strong>5 status</strong>
+              </div>
             </div>
-            <div className="metric-card">
-              <span>Fluxo</span>
-              <strong>5 status</strong>
-            </div>
+            {isTestMode && (
+              <p className="feedback info">
+                Modo teste ativo: esta tela está operando com envio simulado para facilitar a revisão.
+              </p>
+            )}
+            {!firebaseReady && !isTestMode && (
+              <p className="feedback error">
+                Firebase ainda não foi configurado. Preencha o arquivo de ambiente
+                para ativar o envio real.
+              </p>
+            )}
+            {!recaptchaSiteKey && !isTestMode && (
+              <p className="feedback warning">
+                reCAPTCHA não configurado. Defina VITE_RECAPTCHA_SITE_KEY para
+                habilitar proteção completa no MVP.
+              </p>
+            )}
           </div>
-          {isTestMode && (
-            <p className="feedback info">
-              Modo teste ativo: esta tela está operando com envio simulado para facilitar a revisão.
-            </p>
-          )}
-          {!firebaseReady && !isTestMode && (
-            <p className="feedback error">
-              Firebase ainda não foi configurado. Preencha o arquivo de ambiente
-              para ativar o envio real.
-            </p>
-          )}
-          {!recaptchaSiteKey && !isTestMode && (
-            <p className="feedback warning">
-              reCAPTCHA não configurado. Defina VITE_RECAPTCHA_SITE_KEY para
-              habilitar proteção completa no MVP.
-            </p>
-          )}
         </section>
 
         <section className="card form-card">
