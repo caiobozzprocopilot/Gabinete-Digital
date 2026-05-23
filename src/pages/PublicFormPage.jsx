@@ -111,7 +111,7 @@ export default function PublicFormPage() {
     if (honeypot) {
       setFeedback({
         type: 'success',
-        message: 'Recebemos sua solicitacao. Obrigado pelo contato.',
+        message: 'Recebemos sua solicitação. Obrigado pelo contato.',
       })
       return
     }
@@ -232,7 +232,7 @@ export default function PublicFormPage() {
           </div>
           {isTestMode && (
             <p className="feedback info">
-              Modo teste ativo: esta tela esta operando com envio simulado para facilitar a revisao.
+              Modo teste ativo: esta tela está operando com envio simulado para facilitar a revisão.
             </p>
           )}
           {!firebaseReady && !isTestMode && (
@@ -244,7 +244,7 @@ export default function PublicFormPage() {
           {!recaptchaSiteKey && !isTestMode && (
             <p className="feedback warning">
               reCAPTCHA não configurado. Defina VITE_RECAPTCHA_SITE_KEY para
-              habilitar protecao completa no MVP.
+              habilitar proteção completa no MVP.
             </p>
           )}
         </section>
@@ -252,7 +252,7 @@ export default function PublicFormPage() {
         <section className="card form-card">
           <form onSubmit={handleSubmit} className="demand-form">
             <div className="form-header">
-              <h2>Abrir solicitacao</h2>
+              <h2>Abrir solicitação</h2>
               <p>Preencha os campos abaixo para registrar sua demanda.</p>
             </div>
 
@@ -322,7 +322,7 @@ export default function PublicFormPage() {
 
             <div className="input-group">
               <label htmlFor="attachments">
-                Fotos (ate {MAX_FILES}, maximo de {MAX_FILE_SIZE_MB} MB cada)
+                Fotos (até {MAX_FILES}, máximo de {MAX_FILE_SIZE_MB} MB cada)
               </label>
               <input
                 id="attachments"
@@ -350,7 +350,7 @@ export default function PublicFormPage() {
                 onChange={handleFieldChange}
               />
               <span>
-                Autorizo o uso dos meus dados para atendimento da solicitacao,
+                Autorizo o uso dos meus dados para atendimento da solicitação,
                 conforme aviso de privacidade do gabinete.
               </span>
             </label>
