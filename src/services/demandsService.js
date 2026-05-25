@@ -3,6 +3,7 @@ import {
   arrayUnion,
   collection,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -83,4 +84,20 @@ export async function updateDemandStatus({ demandId, status, changedBy }) {
       changedBy,
     }),
   })
+}
+
+// Busca demandas pelo CPF ou telefone do eleitor dentro de um gabinete
+export async function queryDemandsByVoter(tenantSlug, { cpf, phone }) {
+  ensureFirebase()
+  const base = collection(db, DEMANDS_COLLECTION)
+  const field = cpf ? 'voterCpf' : 'voterPhone'
+  const value = cpf || phone
+  const q = query(base, where('tenantSlug', '==', tenantSlug), where(field, '==', value))
+  const snapshot = await getDocs(q)
+  return snapshot.docs
+    .map((d) => {
+      const data = d.data()
+      return { id: d.id, ...data, createdAt: data.createdAt?.toDate?.() ?? null }
+    })
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
 }

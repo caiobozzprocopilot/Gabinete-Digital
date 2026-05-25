@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
-import { Building2, Link as LinkIcon, Lock, Mail, MapPin, User } from 'lucide-react'
+import { Building2, Link as LinkIcon, Lock, Mail, MapPin, Upload, User } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { auth, db, firebaseReady } from '../firebase/config'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { auth, db, firebaseReady, storage } from '../firebase/config'
 import { useAuth } from '../context/useAuth'
 import { slugExists } from '../services/tenantsService'
 
@@ -23,6 +24,13 @@ function mapAuthError(error) {
   if (code.includes('invalid-email')) return 'E-mail inválido.'
   if (code.includes('network-request-failed')) return 'Falha de rede. Verifique sua conexão.'
   return error?.message || 'Erro ao criar conta. Tente novamente.'
+}
+
+async function uploadTenantPhoto(slug, slot, file) {
+  if (!file || !storage) return ''
+  const photoRef = storageRef(storage, `tenant-photos/${slug}/${slot}`)
+  await uploadBytes(photoRef, file)
+  return getDownloadURL(photoRef)
 }
 
 export default function SignupPage() {
@@ -46,6 +54,8 @@ export default function SignupPage() {
   const [slugStatus, setSlugStatus] = useState('idle')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [photos, setPhotos] = useState({ hero: null, form: null, login: null })
+  const [photoPreviews, setPhotoPreviews] = useState({ hero: null, form: null, login: null })
   const slugTimerRef = useRef(null)
 
   useEffect(() => {
@@ -54,8 +64,9 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (slugEdited) return
-    setForm((prev) => ({ ...prev, slug: toSlug(prev.cityName) }))
-  }, [form.cityName, slugEdited])
+    const combined = `${form.vereadorName} ${form.cityName}`.trim()
+    setForm((prev) => ({ ...prev, slug: toSlug(combined) }))
+  }, [form.vereadorName, form.cityName, slugEdited])
 
   useEffect(() => {
     const slug = form.slug
@@ -81,6 +92,13 @@ export default function SignupPage() {
     const { name, value } = event.target
     if (name === 'slug') setSlugEdited(true)
     setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  function handlePhotoChange(slot, event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setPhotos((prev) => ({ ...prev, [slot]: file }))
+    setPhotoPreviews((prev) => ({ ...prev, [slot]: URL.createObjectURL(file) }))
   }
 
   async function handleSubmit(event) {
@@ -127,14 +145,26 @@ export default function SignupPage() {
         createdAt: new Date().toISOString(),
       })
 
+      const [heroPhotoUrl, formPhotoUrl, loginPhotoUrl] = await Promise.all([
+        uploadTenantPhoto(form.slug, 'hero',  photos.hero),
+        uploadTenantPhoto(form.slug, 'form',  photos.form),
+        uploadTenantPhoto(form.slug, 'login', photos.login),
+      ])
+
+      const baseUrl = 'https://gabinete-digital-vereador.web.app'
       await setDoc(doc(db, 'tenants', form.slug), {
         tenantSlug: form.slug,
         cityName: form.cityName,
         state: form.state.trim(),
         vereadorName: form.vereadorName,
-        formPhotoUrl:  '',
-        loginPhotoUrl: '',
-        heroPhotoUrl:  '',
+        formPhotoUrl,
+        loginPhotoUrl,
+        heroPhotoUrl,
+        links: {
+          form:    `${baseUrl}/atendimento/${form.slug}`,
+          landing: `${baseUrl}/vereador/${form.slug}`,
+          login:   `${baseUrl}/painel/login?gabinete=${form.slug}`,
+        },
         createdAt: new Date().toISOString(),
       })
 
@@ -220,7 +250,7 @@ export default function SignupPage() {
               <div className="relative">
                 <LinkIcon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input id="slug" name="slug" type="text" required maxLength={60}
-                  value={form.slug} onChange={handleChange} placeholder="nome-da-cidade"
+                  value={form.slug} onChange={handleChange} placeholder="joao-silva-corbelia"
                   className={`w-full rounded-xl border bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none transition-colors ${
                     slugStatus === 'available' ? 'border-emerald-400 focus:border-emerald-500'
                     : slugStatus === 'taken' || slugStatus === 'invalid' ? 'border-red-300 focus:border-red-400'
@@ -235,13 +265,40 @@ export default function SignupPage() {
               )}
             </div>
 
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-slate-500">
+            <div>
+              <p className="text-xs font-semibold text-slate-500 mb-1.5">
                 Fotos do sistema
-                <span className="ml-1 font-normal text-slate-400">(adicionadas pelo administrador após o cadastro)</span>
+                <span className="ml-1 font-normal text-slate-400 italic">— opcional, pode adicionar depois</span>
               </p>
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-400">
-                As fotos do formulário, login e landing page serão configuradas pelo administrador da plataforma.
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { slot: 'hero',  label: 'Capa da página pública' },
+                  { slot: 'form',  label: 'Foto do formulário' },
+                  { slot: 'login', label: 'Foto do login' },
+                ].map(({ slot, label }) => (
+                  <div key={slot}>
+                    <input
+                      id={`photo-${slot}`}
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => handlePhotoChange(slot, e)}
+                    />
+                    <label
+                      htmlFor={`photo-${slot}`}
+                      className="cursor-pointer flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 bg-slate-50 hover:bg-brand-50 transition-colors overflow-hidden"
+                      style={{ height: 80 }}>
+                      {photoPreviews[slot] ? (
+                        <img src={photoPreviews[slot]} alt={label} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 p-2">
+                          <Upload size={16} className="text-slate-300" />
+                          <span className="text-[10px] text-slate-400 text-center leading-tight">{label}</span>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
 

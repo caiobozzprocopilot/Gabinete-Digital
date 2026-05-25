@@ -1,6 +1,8 @@
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore'
@@ -35,6 +37,11 @@ export async function createTenant({ slug, cityName, state, vereadorName, formPh
   })
 }
 
+export async function updateTenant(slug, fields) {
+  ensureFirebase()
+  await setDoc(doc(db, TENANTS_COLLECTION, slug), fields, { merge: true })
+}
+
 export async function getTenant(slug) {
   if (!firebaseReady || !db || !slug) return null
   try {
@@ -45,4 +52,10 @@ export async function getTenant(slug) {
   } catch {
     return null
   }
+}
+
+export async function listAllTenants() {
+  ensureFirebase()
+  const snapshot = await getDocs(collection(db, TENANTS_COLLECTION))
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
 }

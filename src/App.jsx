@@ -1,10 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import MasterRoute from './components/MasterRoute'
 import ProtectedRoute from './components/ProtectedRoute'
 import TestModeNav from './components/TestModeNav'
 import { AuthProvider } from './context/AuthContext'
 import AdminLoginPage from './pages/AdminLoginPage'
 import DashboardPage from './pages/DashboardPage'
 import LandingPage from './pages/LandingPage'
+import MasterDashboardPage from './pages/MasterDashboardPage'
+import MasterLoginPage from './pages/MasterLoginPage'
 import PublicFormPage from './pages/PublicFormPage'
 import SignupPage from './pages/SignupPage'
 import './App.css'
@@ -26,6 +29,15 @@ function App() {
             <ProtectedRoute allowedRoles={['admin', 'operator']}>
               <DashboardPage />
             </ProtectedRoute>
+          }
+        />
+        <Route path="/master/login" element={<MasterLoginPage />} />
+        <Route
+          path="/master"
+          element={
+            <MasterRoute>
+              <MasterDashboardPage />
+            </MasterRoute>
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />

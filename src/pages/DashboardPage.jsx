@@ -1,13 +1,14 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import {
   BarChart2, Bell, Building2, Calendar, CalendarCheck,
-  Check, CheckCircle, ChevronLeft, ChevronRight, ClipboardList, Copy, LogOut, Mail, MessageSquare, Settings, Zap,
+  Check, CheckCircle, ChevronLeft, ChevronRight, ClipboardList, Copy, LogOut, Mail, MessageSquare, Settings, Upload, Zap,
 } from 'lucide-react'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { DEMAND_STATUS } from '../constants/demandStatus'
-import { firebaseReady } from '../firebase/config'
+import { firebaseReady, storage } from '../firebase/config'
 import { useAuth } from '../context/useAuth'
 import { subscribeDemands, updateDemandStatus } from '../services/demandsService'
-import { getTenant } from '../services/tenantsService'
+import { getTenant, updateTenant } from '../services/tenantsService'
 import { isTestMode } from '../utils/testMode'
 import { exportBatchDemandPdf, exportSingleDemandPdf } from '../utils/pdfUtils'
 import StatusBadge from '../components/StatusBadge'
@@ -18,6 +19,13 @@ import {
 
 const PAGE_SIZE = 8
 const STATUS_PIE_COLORS = ['#2563eb', '#f59e0b', '#8b5cf6', '#16a34a', '#94a3b8']
+
+async function uploadTenantPhoto(slug, slot, file) {
+  if (!file || !storage) return ''
+  const photoRef = storageRef(storage, `tenant-photos/${slug}/${slot}`)
+  await uploadBytes(photoRef, file)
+  return getDownloadURL(photoRef)
+}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -100,6 +108,70 @@ export default function DashboardPage() {
   const [view, setView] = useState('demands')
   const [calMonth, setCalMonth] = useState(() => { const n = new Date(); return { year: n.getFullYear(), month: n.getMonth() } })
   const [calSelectedDay, setCalSelectedDay] = useState(null)
+  const [settingsForm, setSettingsForm] = useState({ vereadorName: '', cityName: '', state: '' })
+  const [settingsPhotos, setSettingsPhotos] = useState({ hero: null, form: null, login: null })
+  const [settingsPreviews, setSettingsPreviews] = useState({ hero: null, form: null, login: null })
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(false)
+  const [settingsError, setSettingsError] = useState('')
+
+  useEffect(() => {
+    if (!tenantData) return
+    setSettingsForm({
+      vereadorName: tenantData.vereadorName || '',
+      cityName: tenantData.cityName || '',
+      state: tenantData.state || '',
+    })
+    setSettingsPreviews({
+      hero: tenantData.heroPhotoUrl || null,
+      form: tenantData.formPhotoUrl || null,
+      login: tenantData.loginPhotoUrl || null,
+    })
+  }, [tenantData])
+
+  function handleSettingsPhotoChange(slot, event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setSettingsPhotos((prev) => ({ ...prev, [slot]: file }))
+    setSettingsPreviews((prev) => ({ ...prev, [slot]: URL.createObjectURL(file) }))
+  }
+
+  async function handleSettingsSave() {
+    const slug = userProfile?.tenantSlug
+    if (!slug) return
+    setSettingsSaving(true)
+    setSettingsError('')
+    setSettingsSaved(false)
+    try {
+      const [heroPhotoUrl, formPhotoUrl, loginPhotoUrl] = await Promise.all([
+        settingsPhotos.hero  ? uploadTenantPhoto(slug, 'hero',  settingsPhotos.hero)  : Promise.resolve(tenantData?.heroPhotoUrl  || ''),
+        settingsPhotos.form  ? uploadTenantPhoto(slug, 'form',  settingsPhotos.form)  : Promise.resolve(tenantData?.formPhotoUrl  || ''),
+        settingsPhotos.login ? uploadTenantPhoto(slug, 'login', settingsPhotos.login) : Promise.resolve(tenantData?.loginPhotoUrl || ''),
+      ])
+      const baseUrl = 'https://gabinete-digital-vereador.web.app'
+      await updateTenant(slug, {
+        vereadorName: settingsForm.vereadorName,
+        cityName: settingsForm.cityName,
+        state: settingsForm.state,
+        heroPhotoUrl,
+        formPhotoUrl,
+        loginPhotoUrl,
+        links: {
+          form:    `${baseUrl}/atendimento/${slug}`,
+          landing: `${baseUrl}/vereador/${slug}`,
+          login:   `${baseUrl}/painel/login?gabinete=${slug}`,
+        },
+      })
+      setTenantData((prev) => ({ ...prev, ...settingsForm, heroPhotoUrl, formPhotoUrl, loginPhotoUrl }))
+      setSettingsPhotos({ hero: null, form: null, login: null })
+      setSettingsSaved(true)
+      setTimeout(() => setSettingsSaved(false), 3000)
+    } catch (err) {
+      setSettingsError(err?.message || 'Erro ao salvar configurações.')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
 
   function copyLink(key, url) {
     navigator.clipboard.writeText(url).then(() => {
@@ -285,7 +357,9 @@ export default function DashboardPage() {
           ))}
         </nav>
         <div className="flex flex-col items-center gap-1 pb-4">
-          <button className="flex items-center justify-center w-10 h-10 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all" type="button" title="Configuracoes">
+          <button
+            className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all ${view === 'settings' ? 'text-white bg-white/20' : 'text-white/50 hover:text-white hover:bg-white/10'}`}
+            type="button" title="Configurações" onClick={() => setView('settings')}>
             <Settings size={20} />
           </button>
           <button className="flex items-center justify-center w-10 h-10 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all" type="button" title="Sair" onClick={logout}>
@@ -790,6 +864,121 @@ export default function DashboardPage() {
               </div>
             )
           })()}
+
+          {/* View: Configurações */}
+          {view === 'settings' && (
+            <div className="max-w-2xl space-y-5">
+              {/* Dados do gabinete */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                <h3 className="font-heading text-base font-semibold text-slate-900 mb-4">Dados do gabinete</h3>
+                <div className="space-y-3">
+                  {[{ id: 'vereadorName', label: 'Nome do vereador', placeholder: 'Nome completo' },
+                    { id: 'cityName', label: 'Município', placeholder: 'Nome da cidade' },
+                    { id: 'state', label: 'Estado', placeholder: 'PR' },
+                  ].map(({ id, label, placeholder }) => (
+                    <div key={id}>
+                      <label className="block text-xs font-medium text-slate-500 mb-1" htmlFor={`st-${id}`}>{label}</label>
+                      <input
+                        id={`st-${id}`}
+                        value={settingsForm[id]}
+                        onChange={(e) => setSettingsForm((prev) => ({ ...prev, [id]: e.target.value }))}
+                        placeholder={placeholder}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-brand-600 transition-colors"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fotos */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                <h3 className="font-heading text-base font-semibold text-slate-900 mb-1">Fotos do sistema</h3>
+                <p className="text-xs text-slate-400 mb-4">Clique em uma foto para trocar. Máx. 10 MB, formato de imagem.</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {[{ slot: 'hero', label: 'Capa da página pública' },
+                    { slot: 'form', label: 'Foto do formulário' },
+                    { slot: 'login', label: 'Foto do login' },
+                  ].map(({ slot, label }) => (
+                    <div key={slot} className="flex flex-col gap-1.5">
+                      <span className="text-xs font-medium text-slate-500 text-center leading-tight">{label}</span>
+                      <input
+                        type="file" accept="image/*"
+                        id={`st-photo-${slot}`}
+                        className="sr-only"
+                        onChange={(e) => handleSettingsPhotoChange(slot, e)}
+                      />
+                      <label
+                        htmlFor={`st-photo-${slot}`}
+                        className="cursor-pointer rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 overflow-hidden flex items-center justify-center bg-slate-50 transition-colors"
+                        style={{ height: 90 }}
+                      >
+                        {settingsPreviews[slot]
+                          ? <img src={settingsPreviews[slot]} alt={label} className="w-full h-full object-cover" />
+                          : <div className="flex flex-col items-center gap-1 text-slate-300">
+                              <Upload size={18} />
+                              <span className="text-[10px]">Adicionar</span>
+                            </div>
+                        }
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Links do gabinete */}
+              {(() => {
+                const slug = userProfile?.tenantSlug
+                if (!slug) return null
+                const base = 'https://gabinete-digital-vereador.web.app'
+                const links = [
+                  { key: 'form',    label: 'Formulário para eleitores', desc: 'Compartilhe com os moradores para receber demandas', url: `${base}/atendimento/${slug}` },
+                  { key: 'landing', label: 'Página pública do gabinete', desc: 'Site público com a identidade da cidade',           url: `${base}/vereador/${slug}` },
+                  { key: 'login',   label: 'Login do painel',            desc: 'Acesso da equipe com a foto da cidade no fundo',    url: `${base}/painel/login?gabinete=${slug}` },
+                ]
+                return (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                    <h3 className="font-heading text-base font-semibold text-slate-900 mb-1">Links do gabinete</h3>
+                    <p className="text-xs text-slate-400 mb-4">Estes links são salvos automaticamente ao salvar as configurações.</p>
+                    <div className="space-y-2">
+                      {links.map(({ key, label, desc, url }) => (
+                        <div key={key} className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 px-4 py-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-slate-700 mb-0.5">{label}</p>
+                            <p className="text-[10px] text-slate-400 mb-1">{desc}</p>
+                            <p className="text-xs text-brand-700 font-mono truncate">{url}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => copyLink(key, url)}
+                            className="flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
+                            style={copiedKey === key
+                              ? { backgroundColor: '#d1fae5', color: '#065f46' }
+                              : { backgroundColor: '#f1f5f9', color: '#475569' }}
+                          >
+                            {copiedKey === key ? <><Check size={12} /> Copiado!</> : <><Copy size={12} /> Copiar</>}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Save */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={settingsSaving}
+                  onClick={handleSettingsSave}
+                  className="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold disabled:opacity-60 transition-colors"
+                >
+                  {settingsSaving ? 'Salvando...' : 'Salvar configurações'}
+                </button>
+                {settingsSaved && <span className="text-sm text-emerald-600 font-medium">✓ Salvo com sucesso!</span>}
+                {settingsError && <span className="text-sm text-red-600">{settingsError}</span>}
+              </div>
+            </div>
+          )}
 
           {/* View: Mensagens */}
           {view === 'messages' && (

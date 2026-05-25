@@ -1,9 +1,9 @@
 ﻿import { useEffect, useRef, useState } from 'react'
-import { Building2, Camera, User, Phone, MapPin, FileText } from 'lucide-react'
+import { Building2, Camera, CreditCard, FileText, ListChecks, MapPin, Phone, Search, User } from 'lucide-react'
 import ReCAPTCHA from 'react-google-recaptcha'
 import { Link, useParams } from 'react-router-dom'
 import { firebaseReady } from '../firebase/config'
-import { submitDemand } from '../services/demandsService'
+import { queryDemandsByVoter, submitDemand } from '../services/demandsService'
 import { getTenant } from '../services/tenantsService'
 import { serializeImages } from '../utils/imageUtils'
 import { isTestMode } from '../utils/testMode'
@@ -13,8 +13,44 @@ const MAX_FILE_SIZE_MB = 5
 const RATE_LIMIT_MS = 60000
 const RATE_LIMIT_KEY = 'vereador-last-submit-ts'
 
+const STATUS_COLORS = {
+  'Nova':        'bg-blue-100 text-blue-700',
+  'Em análise':  'bg-amber-100 text-amber-700',
+  'Encaminhada': 'bg-violet-100 text-violet-700',
+  'Resolvida':   'bg-emerald-100 text-emerald-700',
+  'Arquivada':   'bg-slate-100 text-slate-500',
+}
+
+function formatCpf(raw) {
+  return raw
+    .replace(/\D/g, '')
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3}\.\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3}\.\d{3}\.\d{3})(\d{1,2})/, '$1-$2')
+}
+
+function isValidCpf(cpf) {
+  const digits = cpf.replace(/\D/g, '')
+  if (digits.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(digits)) return false
+  const calc = (len) => {
+    const sum = digits.slice(0, len).split('').reduce((acc, d, i) => acc + Number(d) * (len + 1 - i), 0)
+    const rem = (sum * 10) % 11
+    return rem === 10 ? 0 : rem
+  }
+  return calc(9) === Number(digits[9]) && calc(10) === Number(digits[10])
+}
+
+function fmtDate(value) {
+  if (!value) return ''
+  const d = value instanceof Date ? value : new Date(value)
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 const initialForm = {
   voterName: '',
+  voterCpf: '',
   voterPhone: '',
   voterAddress: '',
   description: '',
@@ -27,6 +63,9 @@ export default function PublicFormPage() {
   const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || ''
   const recaptchaRef = useRef(null)
 
+  const hasSubmittedKey = `vereador-submitted-${slugValue}`
+
+  const [tab, setTab] = useState('form')
   const [formData, setFormData] = useState(initialForm)
   const [files, setFiles] = useState([])
   const [previewUrls, setPreviewUrls] = useState([])
@@ -35,6 +74,14 @@ export default function PublicFormPage() {
   const [sending, setSending] = useState(false)
   const [feedback, setFeedback] = useState({ type: '', message: '' })
   const [tenantData, setTenantData] = useState(null)
+  const [hasSubmittedBefore, setHasSubmittedBefore] = useState(
+    () => localStorage.getItem(hasSubmittedKey) === '1'
+  )
+  const [lookupType, setLookupType] = useState('cpf')
+  const [lookupValue, setLookupValue] = useState('')
+  const [lookupResults, setLookupResults] = useState(null)
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupError, setLookupError] = useState('')
 
   useEffect(() => {
     getTenant(slugValue).then(setTenantData).catch(() => {})
@@ -48,10 +95,28 @@ export default function PublicFormPage() {
 
   function handleFieldChange(event) {
     const { name, value, type, checked } = event.target
-    setFormData((current) => ({
-      ...current,
-      [name]: type === 'checkbox' ? checked : value,
-    }))
+    const cooked = name === 'voterCpf' ? formatCpf(value) : (type === 'checkbox' ? checked : value)
+    setFormData((current) => ({ ...current, [name]: cooked }))
+  }
+
+  async function handleLookup(e) {
+    e.preventDefault()
+    if (!lookupValue.trim()) return
+    setLookupLoading(true)
+    setLookupError('')
+    setLookupResults(null)
+    try {
+      const isCpf = lookupType === 'cpf'
+      const results = await queryDemandsByVoter(slugValue, {
+        cpf:   isCpf  ? lookupValue.trim() : undefined,
+        phone: !isCpf ? lookupValue.trim() : undefined,
+      })
+      setLookupResults(results)
+    } catch (err) {
+      setLookupError(err?.message || 'Erro ao buscar demandas.')
+    } finally {
+      setLookupLoading(false)
+    }
   }
 
   function handleFilesChange(event) {
@@ -73,6 +138,8 @@ export default function PublicFormPage() {
       return 'Firebase nao configurado. Ajuste o arquivo .env.local antes de testar.'
     }
     if (!formData.voterName.trim()) return 'Informe o nome completo.'
+    if (!formData.voterCpf.trim()) return 'Informe o CPF.'
+    if (!isValidCpf(formData.voterCpf)) return 'CPF inválido. Verifique os números digitados.'
     if (!formData.voterPhone.trim()) return 'Informe um telefone para retorno.'
     if (!formData.voterAddress.trim()) return 'Informe o endereço completo da ocorrência.'
     if (!formData.description.trim()) return 'Descreva a demanda.'
@@ -109,6 +176,7 @@ export default function PublicFormPage() {
       } else {
         await submitDemand({
           voterName: formData.voterName.trim(),
+          voterCpf: formData.voterCpf.trim(),
           voterPhone: formData.voterPhone.trim(),
           voterAddress: formData.voterAddress.trim(),
           description: formData.description.trim(),
@@ -119,6 +187,8 @@ export default function PublicFormPage() {
         })
       }
       localStorage.setItem(RATE_LIMIT_KEY, String(Date.now()))
+      localStorage.setItem(hasSubmittedKey, '1')
+      setHasSubmittedBefore(true)
       setFormData(initialForm)
       setFiles([])
       setPreviewUrls((current) => { current.forEach((url) => URL.revokeObjectURL(url)); return [] })
@@ -153,9 +223,24 @@ export default function PublicFormPage() {
             </span>
           </div>
         </div>
-        <Link className="text-xs text-slate-500 hover:text-brand-700 font-medium transition-colors" to={`/painel/login?gabinete=${slugValue}`}>
-          Acesso administrativo
-        </Link>
+        <div className="flex items-center gap-3">
+          {hasSubmittedBefore && (
+            <button
+              onClick={() => setTab(tab === 'minhas' ? 'form' : 'minhas')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                tab === 'minhas'
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-brand-50 text-brand-700 hover:bg-brand-100'
+              }`}
+            >
+              <ListChecks size={13} />
+              Ver minhas demandas
+            </button>
+          )}
+          <Link className="text-xs text-slate-500 hover:text-brand-700 font-medium transition-colors" to={`/painel/login?gabinete=${slugValue}`}>
+            Acesso administrativo
+          </Link>
+        </div>
       </header>
 
       {/* Content */}
@@ -199,11 +284,6 @@ export default function PublicFormPage() {
               ))}
             </ul>
 
-            <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3 mb-5">
-              <p className="text-white/50 text-xs font-medium mb-0.5">Link público ativo</p>
-              <p className="text-white text-sm font-mono">/atendimento/{slugValue}</p>
-            </div>
-
             <div className="grid grid-cols-3 gap-2">
               {[
                 { label: 'Canal', value: '24h' },
@@ -237,6 +317,90 @@ export default function PublicFormPage() {
 
         {/* Right form panel */}
         <section className="flex-1 overflow-y-auto bg-white border-l border-slate-100">
+
+          {/* ── Minhas Demandas ── */}
+          {tab === 'minhas' && (
+            <div className="max-w-lg mx-auto px-6 py-10">
+              <div className="flex items-center gap-2 mb-1">
+                <ListChecks size={20} className="text-brand-600" />
+                <h2 className="font-heading text-2xl font-bold text-slate-900">Minhas demandas</h2>
+              </div>
+              <p className="text-sm text-slate-500 mb-8">Informe seu CPF ou telefone para localizar suas solicitações.</p>
+
+              <form onSubmit={handleLookup} className="space-y-4 mb-8">
+                <div className="flex gap-2">
+                  {[
+                    { id: 'cpf',   label: 'CPF' },
+                    { id: 'phone', label: 'Telefone' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => { setLookupType(id); setLookupValue(''); setLookupResults(null) }}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                        lookupType === id
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type={lookupType === 'phone' ? 'tel' : 'text'}
+                    inputMode="numeric"
+                    value={lookupValue}
+                    onChange={(e) => setLookupValue(lookupType === 'cpf' ? formatCpf(e.target.value) : e.target.value)}
+                    placeholder={lookupType === 'cpf' ? '000.000.000-00' : '(00) 00000-0000'}
+                    maxLength={lookupType === 'cpf' ? 14 : 20}
+                    required
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-brand-600 transition-colors"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={lookupLoading}
+                  className="w-full py-3 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold transition-colors disabled:opacity-60"
+                >
+                  {lookupLoading ? 'Buscando...' : 'Buscar demandas'}
+                </button>
+              </form>
+
+              {lookupError && (
+                <p className="text-sm px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-200 mb-4">{lookupError}</p>
+              )}
+
+              {lookupResults !== null && (
+                lookupResults.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">Nenhuma demanda encontrada para este {lookupType === 'cpf' ? 'CPF' : 'telefone'}.</p>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-slate-400 font-medium">{lookupResults.length} demanda{lookupResults.length !== 1 ? 's' : ''} encontrada{lookupResults.length !== 1 ? 's' : ''}</p>
+                    {lookupResults.map((d) => (
+                      <div key={d.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <span className="text-xs font-mono text-slate-400">#{d.id.slice(-6).toUpperCase()}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[d.status] || 'bg-slate-100 text-slate-500'}`}>
+                            {d.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-700 leading-relaxed line-clamp-3 mb-2">{d.description}</p>
+                        <p className="text-xs text-slate-400">{fmtDate(d.createdAt)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+          )}
+
+          {/* ── Nova demanda ── */}
+          {tab === 'form' && (
           <div className="max-w-lg mx-auto px-6 py-10">
             <h2 className="font-heading text-2xl font-bold text-slate-900 mb-1">Abrir solicitação</h2>
             <p className="text-sm text-slate-500 mb-8">Preencha os campos abaixo para registrar sua demanda.</p>
@@ -257,6 +421,17 @@ export default function PublicFormPage() {
                 <div className="relative">
                   <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input id="voterName" name="voterName" type="text" value={formData.voterName} onChange={handleFieldChange} required maxLength={120} placeholder="Como prefere ser chamado"
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-brand-600 transition-colors" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1.5" htmlFor="voterCpf">
+                  CPF
+                </label>
+                <div className="relative">
+                  <CreditCard size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input id="voterCpf" name="voterCpf" type="text" inputMode="numeric" value={formData.voterCpf} onChange={handleFieldChange} required maxLength={14} placeholder="000.000.000-00"
                     className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-brand-600 transition-colors" />
                 </div>
               </div>
@@ -336,15 +511,25 @@ export default function PublicFormPage() {
               ) : null}
 
               {feedback.message ? (
-                <p className={`text-sm px-4 py-3 rounded-xl ${
+                <div className={`text-sm px-4 py-3 rounded-xl ${
                   feedback.type === 'error'
                     ? 'bg-red-50 text-red-700 border border-red-200'
                     : feedback.type === 'success'
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     : 'bg-amber-50 text-amber-700 border border-amber-200'
                 }`}>
-                  {feedback.message}
-                </p>
+                  <p>{feedback.message}</p>
+                  {feedback.type === 'success' && (
+                    <button
+                      type="button"
+                      onClick={() => setTab('minhas')}
+                      className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 underline underline-offset-2 hover:no-underline"
+                    >
+                      <ListChecks size={13} />
+                      Ver minhas demandas
+                    </button>
+                  )}
+                </div>
               ) : null}
 
               <button
@@ -356,6 +541,7 @@ export default function PublicFormPage() {
 
             </form>
           </div>
+          )}
         </section>
       </div>
     </div>
