@@ -249,7 +249,7 @@ export default function PublicFormPage() {
         {/* Left panel */}
         <aside
           className="hidden lg:flex flex-col w-[45%] flex-none relative overflow-hidden"
-          style={{ backgroundImage: `url(${tenantData?.formPhotoUrl || '/CIDADE pagina form.jpeg'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          style={{ backgroundImage: `url(${tenantData?.formPhotoUrl || '/magnific_wide-shot-river-in-foregr_XtiKNbXBfo.png'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-brand-950/95 via-brand-950/80 to-brand-950/95" />
 

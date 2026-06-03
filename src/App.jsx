@@ -9,6 +9,7 @@ import LandingPage from './pages/LandingPage'
 import MasterDashboardPage from './pages/MasterDashboardPage'
 import MasterLoginPage from './pages/MasterLoginPage'
 import PublicFormPage from './pages/PublicFormPage'
+import SaasLandingPage from './pages/SaasLandingPage'
 import SignupPage from './pages/SignupPage'
 import './App.css'
 
@@ -17,7 +18,7 @@ function App() {
     <AuthProvider>
       <TestModeNav />
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<SaasLandingPage />} />
         <Route path="/vereador/:slug" element={<LandingPage />} />
         <Route path="/cadastro" element={<SignupPage />} />
         <Route path="/formulario" element={<PublicFormPage />} />

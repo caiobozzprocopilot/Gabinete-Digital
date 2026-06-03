@@ -168,8 +168,8 @@ export default function LandingPage() {
             <Building2 className="w-4 h-4 text-brand-600" />
             <span>Gabinete Digital</span>
           </div>
-          <span>&copy; 2026 Gabinete Digital &middot; {cityLabel}</span>
-          <Link to="/painel/login" className="hover:text-white/60 transition-colors">Acesso administrativo</Link>
+          <span>&copy; {new Date().getFullYear()} Gabinete Digital &middot; {cityLabel}</span>
+          <Link to={`/painel/login?gabinete=${formSlug}`} className="hover:text-white/60 transition-colors">Acesso administrativo</Link>
         </div>
       </footer>
     </div>

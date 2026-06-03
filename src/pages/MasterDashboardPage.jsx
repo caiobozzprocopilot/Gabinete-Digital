@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Building2, Copy, Check, ExternalLink, LogOut,
   Plus, RefreshCw, ShieldCheck, Users,
 } from 'lucide-react'
+import { signOut } from 'firebase/auth'
+import { auth } from '../firebase/config'
 import { listAllTenants } from '../services/tenantsService'
 
 const BASE_URL = 'https://gabinete-digital-vereador.web.app'
@@ -102,6 +104,7 @@ export default function MasterDashboardPage() {
   const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   function loadTenants() {
     setLoading(true)
@@ -114,9 +117,12 @@ export default function MasterDashboardPage() {
 
   useEffect(loadTenants, [])
 
-  function handleLogout() {
-    sessionStorage.removeItem('master_auth')
-    window.location.href = '/master/login'
+  async function handleLogout() {
+    try {
+      await signOut(auth)
+    } finally {
+      navigate('/master/login', { replace: true })
+    }
   }
 
   return (

@@ -1,22 +1,49 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db } from '../firebase/config'
 
-const MASTER_KEY = import.meta.env.VITE_MASTER_KEY || ''
+function mapAuthError(error) {
+  const code = error?.code || ''
+  if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
+    return 'E-mail ou senha incorretos.'
+  }
+  if (code.includes('invalid-email')) return 'E-mail inválido.'
+  if (code.includes('too-many-requests')) return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+  if (code.includes('network-request-failed')) return 'Falha de rede. Verifique sua conexão.'
+  return 'Não foi possível entrar agora. Tente novamente.'
+}
 
 export default function MasterLoginPage() {
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    if (password === MASTER_KEY) {
-      sessionStorage.setItem('master_auth', '1')
+    setError('')
+    setSubmitting(true)
+
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email.trim(), password)
+      const snap = await getDoc(doc(db, 'adminUsers', cred.user.uid))
+
+      if (!snap.exists() || snap.data().role !== 'master') {
+        await signOut(auth)
+        setError('Esta conta não tem permissão de acesso master.')
+        return
+      }
+
       navigate('/master')
-    } else {
-      setError('Senha incorreta.')
-      setPassword('')
+    } catch (err) {
+      setError(mapAuthError(err))
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -40,24 +67,56 @@ export default function MasterLoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Senha de acesso
+              E-mail
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoFocus
-              placeholder="••••••••••••"
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
-            />
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                autoComplete="email"
+                placeholder="master@email.com"
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 pl-10 pr-4 py-3 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              Senha
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                placeholder="••••••••••••"
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 pl-10 pr-10 py-3 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-brand-400 transition-colors"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
-            className="w-full py-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white text-sm font-semibold transition-all"
+            disabled={submitting}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Entrar
+            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {submitting ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
       </div>
